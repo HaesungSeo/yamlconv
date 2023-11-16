@@ -1,0 +1,17 @@
+---
+sriov:
+  - network: resource01 # network name
+    interface: net1
+    ip: 10.10.0.101     # network ip
+gpu:
+ drivers: video,compute,utility
+
+service:
+  type:
+    NodePort: 30080
+
+#cloud-config
+password: centos
+chpasswd: { expire: False }
+ssh_pwauth: True
+
