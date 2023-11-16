@@ -3,13 +3,13 @@ yamlconv
 Print & Search Yaml struct in go
 - [import in your project](#import-in-your-project)
 - [example of printing yaml struct](#example-of-printing-yaml-struct)
-	- [yaml example](#yaml-example)
-	- [sample code](#sample-code)
-	- [run](#run)
+  - [yaml example](#yaml-example)
+  - [sample code](#sample-code)
+  - [run result](#run-result)
 - [example of searching keys in yaml struct](#example-of-searching-keys-in-yaml-struct)
-	- [yaml example](#yaml-example-1)
-	- [sample code](#sample-code-1)
-	- [run](#run-1)
+  - [yaml example](#yaml-example-1)
+  - [sample code](#sample-code-1)
+  - [run result](#run-result-1)
 
 
 # import in your project
@@ -41,6 +41,7 @@ ssh_pwauth: True
 ```
 
 ## sample code
+lets go and play with [playground](https://go.dev/play/p/gPU6zdlDP7R)
 ```
 package main
 
@@ -76,7 +77,7 @@ func main() {
 }
 ```
 
-## run
+## run result
 ```
 $ ./print
 
@@ -99,6 +100,7 @@ $
 
 # example of searching keys in yaml struct
 ## yaml example
+lets go and play with [playground](https://go.dev/play/p/85ICpvMjTua)
 ```
 ---
 sriov:
@@ -157,7 +159,7 @@ func main() {
 }
 ```
 
-## run
+## run result
 ```
 $ ./search
  Str[10.10.0.101]
