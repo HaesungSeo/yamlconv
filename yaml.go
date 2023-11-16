@@ -53,6 +53,9 @@ func print(data interface{}, tab, ntab string) {
 
 // MarshalJson returns the JSON encoding of the sub yaml struct data.
 // keys are used to filter the match sub yaml struct.
+// a key in kyes must be a form of below:
+// - '[' Unsigned Integer ']', e.g. '[0]', '[10]', etc
+// - any string that can be used as golang map[] key.
 func MarshalJson(data interface{}, keys []string) (string, error) {
 	sub, err := Search(data, keys)
 	if err != nil {
@@ -65,6 +68,9 @@ func MarshalJson(data interface{}, keys []string) (string, error) {
 // UnmarshalJson parses the yaml struct data and stores the result in
 // the value pointed to by v.
 // keys are used to filter the match sub yaml struct.
+// a key in kyes must be a form of below:
+// - '[' Unsigned Integer ']', e.g. '[0]', '[10]', etc
+// - any string that can be used as golang map[] key.
 //
 // If v is nil or not a pointer, it returns an InvalidUnmarshalError.
 func UnmarshalJson(data interface{}, keys []string, v any) error {
@@ -167,6 +173,9 @@ func (m *SearchKeyTooLongError) Error() string {
 
 // Search returns the match sub-struct of yaml struct data.
 // keys are used to filter the match sub yaml struct.
+// a key in kyes must be a form of below:
+// - '[' Unsigned Integer ']', e.g. '[0]', '[10]', etc
+// - any string that can be used as golang map[] key.
 //
 // It returns the same yaml struct, if the keys is empty.
 //
@@ -230,6 +239,136 @@ func Search(data interface{}, keys []string) (interface{}, error) {
 			for _, v := range m {
 				if search == v.Key {
 					return Search(v.Value, keys[1:])
+				}
+				mkeys = append(mkeys, v.Key)
+			}
+			return nil, &NotFoundError{fmt.Sprintf("search %s not in %s", search, mkeys)}
+		}
+	default:
+		if len(keys) > 0 {
+			return nil, &SearchKeyTooLongError{fmt.Sprintf("key left: %s", keys)}
+		}
+		return data, nil
+	}
+}
+
+// Subtract returns the modified yaml struct data.
+// keys are used to filter out the matching sub yaml struct.
+// a key in kyes must be a form of below:
+// - '[' Unsigned Integer ']', e.g. '[0]', '[10]', etc
+// - any string that can be used as golang map[] key.
+//
+// It returns the same yaml struct, if the keys is empty.
+//
+// An error is returned if there are no match keys or the length
+// of keys are longer than the one of nesting of yaml struct data.
+func Subtract(data interface{}, keys []string) (interface{}, error) {
+	if len(keys) == 0 || len(keys[0]) == 0 {
+		// the end of search
+		return data, nil
+	}
+
+	// index or pattern
+	idx := -1
+	search := ""
+	switch {
+	case keys[0][0] == '[':
+		n, err := fmt.Sscanf(keys[0][1:], "%d", &idx)
+		if err != nil {
+			return nil, &InvalidIndexError{fmt.Sprintf("invalid index: %s", keys[0])}
+		}
+		if n < 0 {
+			return nil, &IndexOutOfRangeError{fmt.Sprintf("index out of range: %s", keys[0])}
+		}
+	default:
+		search = keys[0]
+	}
+
+	switch m := data.(type) {
+	case []interface{}:
+		if idx == -1 {
+			return nil, &InvalidIndexError{fmt.Sprintf("expect key[%s], but []interface{}", search)}
+		}
+		if idx >= len(m) {
+			return nil, &NotFoundError{fmt.Sprintf("index %d out of len(arr) %d", idx, len(m))}
+		}
+		// the final
+		if len(keys) == 1 {
+			if idx == 0 {
+				m = (m)[idx+1:]
+			} else {
+				m = append((m)[:idx], (m)[idx+1:]...)
+			}
+		} else {
+			ret, err := Subtract(m[idx], keys[1:])
+			if err != nil {
+				return nil, err
+			}
+			m[idx] = ret
+		}
+		return m, nil
+	case map[interface{}]interface{}:
+		if idx != -1 {
+			return nil, &InvalidIndexError{fmt.Sprintf("expect index %d, but map[]interface{}", idx)}
+		}
+		i, ok := m[search]
+		if !ok {
+			var mkeys []interface{}
+			for k := range m {
+				mkeys = append(mkeys, k)
+			}
+			return nil, &NotFoundError{fmt.Sprintf("search %s not in %s", search, mkeys)}
+		}
+		// the final
+		if len(keys) == 1 {
+			delete(m, search)
+		} else {
+			ret, err := Subtract(i, keys[1:])
+			if err != nil {
+				return nil, err
+			}
+			m[search] = ret
+		}
+		return m, nil
+	case yaml.MapSlice:
+		if idx != -1 {
+			if idx >= len(m) {
+				return nil, &NotFoundError{fmt.Sprintf("index %d out of len(MapSlice) %d", idx, len(m))}
+			}
+			// the final
+			if len(keys) == 1 {
+				if idx == 0 {
+					m = (m)[idx+1:]
+				} else {
+					m = append((m)[:idx], (m)[idx+1:]...)
+				}
+			} else {
+				ret, err := Subtract(m[idx].Value, keys[1:])
+				if err != nil {
+					return nil, err
+				}
+				m[idx].Value = ret
+			}
+			return m, nil
+		} else {
+			var mkeys []interface{}
+			for idx, v := range m {
+				if search == v.Key {
+					// the final
+					if len(keys) == 1 {
+						if idx == 0 {
+							m = (m)[idx+1:]
+						} else {
+							m = append((m)[:idx], (m)[idx+1:]...)
+						}
+					} else {
+						ret, err := Subtract(v.Value, keys[1:])
+						if err != nil {
+							return nil, err
+						}
+						m[idx].Value = ret
+					}
+					return m, nil
 				}
 				mkeys = append(mkeys, v.Key)
 			}
