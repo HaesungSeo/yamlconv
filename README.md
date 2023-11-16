@@ -197,6 +197,7 @@ ssh_pwauth: True
 
 ## sample code
 remove the struct under the keys "sriov[1]", "sriov[0].network" and "password" in above yaml sample<br>
+lets go and play with [playground](https://go.dev/play/p/qJ9iX0VYD5v)
 ```
 package main
 
