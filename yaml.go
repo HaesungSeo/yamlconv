@@ -139,38 +139,6 @@ func marshalJson(data interface{}) string {
 	}
 }
 
-type NotFoundError struct {
-	msg string
-}
-
-func (m *NotFoundError) Error() string {
-	return m.msg
-}
-
-type InvalidIndexError struct {
-	msg string
-}
-
-func (m *InvalidIndexError) Error() string {
-	return m.msg
-}
-
-type IndexOutOfRangeError struct {
-	msg string
-}
-
-func (m *IndexOutOfRangeError) Error() string {
-	return m.msg
-}
-
-type SearchKeyTooLongError struct {
-	msg string
-}
-
-func (m *SearchKeyTooLongError) Error() string {
-	return m.msg
-}
-
 // Search returns the match sub-struct of yaml struct data.
 // keys are used to filter the match sub yaml struct.
 // a key in kyes must be a form of below:
@@ -197,10 +165,14 @@ func Search(data interface{}, keys []string) (interface{}, error) {
 	case keys[0][0] == '[':
 		n, err := fmt.Sscanf(keys[0][1:], "%d", &idx)
 		if err != nil {
-			return data, &InvalidIndexError{fmt.Sprintf("invalid index: %s", keys[0])}
+			return data, &InvalidIndexError{
+				fmt.Errorf("invalid index: %s: %w", keys[0],
+					ErrInvalidIndexError)}
 		}
 		if n < 0 {
-			return data, &IndexOutOfRangeError{fmt.Sprintf("index out of range: %s", keys[0])}
+			return data, &IndexOutOfRangeError{
+				fmt.Errorf("index out of range: %s: %w", keys[0],
+					ErrIndexOutOfRangeError)}
 		}
 	default:
 		search = keys[0]
@@ -209,15 +181,21 @@ func Search(data interface{}, keys []string) (interface{}, error) {
 	switch m := data.(type) {
 	case []interface{}:
 		if idx == -1 {
-			return nil, &InvalidIndexError{fmt.Sprintf("expect key[%s], but []interface{}", search)}
+			return nil, &InvalidIndexError{
+				fmt.Errorf("expect key[%s], but []interface{}: %w", search,
+					ErrInvalidIndexError)}
 		}
 		if idx >= len(m) {
-			return nil, &NotFoundError{fmt.Sprintf("index %d out of len(arr) %d", idx, len(m))}
+			return nil, &NotFoundError{
+				fmt.Errorf("index %d out of len(arr) %d: %w", idx, len(m),
+					ErrNotFoundError)}
 		}
 		return Search(m[idx], keys[1:])
 	case map[interface{}]interface{}:
 		if idx != -1 {
-			return nil, &InvalidIndexError{fmt.Sprintf("expect index %d, but map[]interface{}", idx)}
+			return nil, &InvalidIndexError{
+				fmt.Errorf("expect index %d, but map[]interface{}: %w", idx,
+					ErrInvalidIndexError)}
 		}
 		i, ok := m[search]
 		if !ok {
@@ -225,13 +203,17 @@ func Search(data interface{}, keys []string) (interface{}, error) {
 			for k := range m {
 				mkeys = append(mkeys, k)
 			}
-			return nil, &NotFoundError{fmt.Sprintf("search %s not in %s", search, mkeys)}
+			return nil, &NotFoundError{
+				fmt.Errorf("search %s not in %s: %w", search, mkeys,
+					ErrNotFoundError)}
 		}
 		return Search(i, keys[1:])
 	case yaml.MapSlice:
 		if idx != -1 {
 			if idx >= len(m) {
-				return nil, &NotFoundError{fmt.Sprintf("index %d out of len(MapSlice) %d", idx, len(m))}
+				return nil, &NotFoundError{
+					fmt.Errorf("index %d out of len(MapSlice) %d: %w", idx, len(m),
+						ErrNotFoundError)}
 			}
 			return Search(m[idx].Value, keys[1:])
 		} else {
@@ -242,11 +224,15 @@ func Search(data interface{}, keys []string) (interface{}, error) {
 				}
 				mkeys = append(mkeys, v.Key)
 			}
-			return nil, &NotFoundError{fmt.Sprintf("search %s not in %s", search, mkeys)}
+			return nil, &NotFoundError{
+				fmt.Errorf("search %s not in %s: %w", search, mkeys,
+					ErrNotFoundError)}
 		}
 	default:
 		if len(keys) > 0 {
-			return nil, &SearchKeyTooLongError{fmt.Sprintf("key left: %s", keys)}
+			return nil, &SearchKeyTooLongError{
+				fmt.Errorf("key left: %s: %w", keys,
+					ErrSearchKeyTooLongError)}
 		}
 		return data, nil
 	}
@@ -275,10 +261,14 @@ func Subtract(data interface{}, keys []string) (interface{}, error) {
 	case keys[0][0] == '[':
 		n, err := fmt.Sscanf(keys[0][1:], "%d", &idx)
 		if err != nil {
-			return nil, &InvalidIndexError{fmt.Sprintf("invalid index: %s", keys[0])}
+			return nil, &InvalidIndexError{
+				fmt.Errorf("invalid index: %s: %w", keys[0],
+					ErrInvalidIndexError)}
 		}
 		if n < 0 {
-			return nil, &IndexOutOfRangeError{fmt.Sprintf("index out of range: %s", keys[0])}
+			return nil, &IndexOutOfRangeError{
+				fmt.Errorf("index out of range: %s: %w", keys[0],
+					ErrIndexOutOfRangeError)}
 		}
 	default:
 		search = keys[0]
@@ -287,10 +277,14 @@ func Subtract(data interface{}, keys []string) (interface{}, error) {
 	switch m := data.(type) {
 	case []interface{}:
 		if idx == -1 {
-			return nil, &InvalidIndexError{fmt.Sprintf("expect key[%s], but []interface{}", search)}
+			return nil, &InvalidIndexError{
+				fmt.Errorf("expect key[%s], but []interface{}: %w", search,
+					ErrInvalidIndexError)}
 		}
 		if idx >= len(m) {
-			return nil, &NotFoundError{fmt.Sprintf("index %d out of len(arr) %d", idx, len(m))}
+			return nil, &NotFoundError{
+				fmt.Errorf("index %d out of len(arr) %d: %w", idx, len(m),
+					ErrNotFoundError)}
 		}
 		// the final
 		if len(keys) == 1 {
@@ -309,7 +303,9 @@ func Subtract(data interface{}, keys []string) (interface{}, error) {
 		return m, nil
 	case map[interface{}]interface{}:
 		if idx != -1 {
-			return nil, &InvalidIndexError{fmt.Sprintf("expect index %d, but map[]interface{}", idx)}
+			return nil, &InvalidIndexError{
+				fmt.Errorf("expect index %d, but map[]interface{}: %w", idx,
+					ErrInvalidIndexError)}
 		}
 		i, ok := m[search]
 		if !ok {
@@ -317,7 +313,9 @@ func Subtract(data interface{}, keys []string) (interface{}, error) {
 			for k := range m {
 				mkeys = append(mkeys, k)
 			}
-			return nil, &NotFoundError{fmt.Sprintf("search %s not in %s", search, mkeys)}
+			return nil, &NotFoundError{
+				fmt.Errorf("search %s not in %s: %w", search, mkeys,
+					ErrNotFoundError)}
 		}
 		// the final
 		if len(keys) == 1 {
@@ -333,7 +331,9 @@ func Subtract(data interface{}, keys []string) (interface{}, error) {
 	case yaml.MapSlice:
 		if idx != -1 {
 			if idx >= len(m) {
-				return nil, &NotFoundError{fmt.Sprintf("index %d out of len(MapSlice) %d", idx, len(m))}
+				return nil, &NotFoundError{
+					fmt.Errorf("index %d out of len(MapSlice) %d: %w", idx, len(m),
+						ErrNotFoundError)}
 			}
 			// the final
 			if len(keys) == 1 {
@@ -372,11 +372,15 @@ func Subtract(data interface{}, keys []string) (interface{}, error) {
 				}
 				mkeys = append(mkeys, v.Key)
 			}
-			return nil, &NotFoundError{fmt.Sprintf("search %s not in %s", search, mkeys)}
+			return nil, &NotFoundError{
+				fmt.Errorf("search %s not in %s: %w", search, mkeys,
+					ErrNotFoundError)}
 		}
 	default:
 		if len(keys) > 0 {
-			return nil, &SearchKeyTooLongError{fmt.Sprintf("key left: %s", keys)}
+			return nil, &SearchKeyTooLongError{
+				fmt.Errorf("key left: %s: %w", keys,
+					ErrSearchKeyTooLongError)}
 		}
 		return data, nil
 	}
