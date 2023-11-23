@@ -56,13 +56,13 @@ func print(data interface{}, tab, ntab string) {
 // a key in kyes must be a form of below:
 // - '[' Unsigned Integer ']', e.g. '[0]', '[10]', etc
 // - any string that can be used as golang map[] key.
-func MarshalJson(data interface{}, keys []string) (string, error) {
+func MarshalJson(data interface{}, keys []string) ([]byte, error) {
 	sub, err := Search(data, keys)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return marshalJson(sub), nil
+	return []byte(marshalJson(sub)), nil
 }
 
 // UnmarshalJson parses the yaml struct data and stores the result in
