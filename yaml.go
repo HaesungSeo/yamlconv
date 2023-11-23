@@ -24,6 +24,11 @@ func print(data interface{}, tab, ntab string) {
 			fmt.Printf("\n%sA[%d/%d]", tab, i, nArr)
 			print(o, ntab, ntab+ntab)
 		}
+	case map[string]interface{}:
+		for k, v := range m {
+			fmt.Printf("\n%sK[%s]", tab, k)
+			print(v, ntab, ntab+ntab)
+		}
 	case map[interface{}]interface{}:
 		for k, v := range m {
 			fmt.Printf("\n%sK[%s]", tab, k)
@@ -94,6 +99,14 @@ func marshalJson(data interface{}) string {
 			sep = ","
 		}
 		return "[" + items + "]"
+	case map[string]interface{}:
+		items := ""
+		sep := ""
+		for k, v := range m {
+			items = items + sep + fmt.Sprintf("\"%s\":%s", k, marshalJson(v))
+			sep = ","
+		}
+		return "{" + items + "}"
 	case map[interface{}]interface{}:
 		items := ""
 		sep := ""
@@ -191,6 +204,23 @@ func Search(data interface{}, keys []string) (interface{}, error) {
 					ErrNotFoundError)}
 		}
 		return Search(m[idx], keys[1:])
+	case map[string]interface{}:
+		if idx != -1 {
+			return nil, &InvalidIndexError{
+				fmt.Errorf("expect index %d, but map[]interface{}: %w", idx,
+					ErrInvalidIndexError)}
+		}
+		i, ok := m[search]
+		if !ok {
+			var mkeys []interface{}
+			for k := range m {
+				mkeys = append(mkeys, k)
+			}
+			return nil, &NotFoundError{
+				fmt.Errorf("search %s not in %s: %w", search, mkeys,
+					ErrNotFoundError)}
+		}
+		return Search(i, keys[1:])
 	case map[interface{}]interface{}:
 		if idx != -1 {
 			return nil, &InvalidIndexError{
@@ -299,6 +329,33 @@ func Subtract(data interface{}, keys []string) (interface{}, error) {
 				return nil, err
 			}
 			m[idx] = ret
+		}
+		return m, nil
+	case map[string]interface{}:
+		if idx != -1 {
+			return nil, &InvalidIndexError{
+				fmt.Errorf("expect index %d, but map[]interface{}: %w", idx,
+					ErrInvalidIndexError)}
+		}
+		i, ok := m[search]
+		if !ok {
+			var mkeys []interface{}
+			for k := range m {
+				mkeys = append(mkeys, k)
+			}
+			return nil, &NotFoundError{
+				fmt.Errorf("search %s not in %s: %w", search, mkeys,
+					ErrNotFoundError)}
+		}
+		// the final
+		if len(keys) == 1 {
+			delete(m, search)
+		} else {
+			ret, err := Subtract(i, keys[1:])
+			if err != nil {
+				return nil, err
+			}
+			m[search] = ret
 		}
 		return m, nil
 	case map[interface{}]interface{}:
