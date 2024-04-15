@@ -5,6 +5,7 @@ package yamlconv
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -103,7 +104,7 @@ func marshalJson(data interface{}) string {
 		items := ""
 		sep := ""
 		for k, v := range m {
-			items = items + sep + fmt.Sprintf("\"%s\":%s", k, marshalJson(v))
+			items = items + sep + marshalJson(k) + ":" + marshalJson(v)
 			sep = ","
 		}
 		return "{" + items + "}"
@@ -111,7 +112,7 @@ func marshalJson(data interface{}) string {
 		items := ""
 		sep := ""
 		for k, v := range m {
-			items = items + sep + fmt.Sprintf("\"%s\":%s", k, marshalJson(v))
+			items = items + sep + marshalJson(k) + ":" + marshalJson(v)
 			sep = ","
 		}
 		return "{" + items + "}"
@@ -123,7 +124,7 @@ func marshalJson(data interface{}) string {
 			value := marshalJson(o.Value)
 			if len(key) > 0 {
 				if len(value) > 0 {
-					items = items + sep + fmt.Sprintf("%s:%s", key, value)
+					items = items + sep + key + ":" + value
 				} else {
 					items = items + sep + key
 				}
@@ -146,7 +147,11 @@ func marshalJson(data interface{}) string {
 	case nil:
 		return "{}"
 	case string:
-		return fmt.Sprintf("\"%s\"", m)
+		buf, _ := json.Marshal(m)
+		r0 := string(buf)
+		r1 := strings.ReplaceAll(r0, `\n`, "\\n")
+		r2 := strings.ReplaceAll(r1, `\r`, "\\r")
+		return r2
 	default:
 		return fmt.Sprintf("\"%s\"", m)
 	}

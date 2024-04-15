@@ -25,30 +25,19 @@ func (m *SearchKey) Set(v string) error {
 func main() {
 	var searchKeys SearchKey
 	yamlpath := flag.String("f", "/dev/stdin", "yaml file")
-	ofmt := flag.String("o", "text", "output format, one of text, json")
+	ofmt := flag.String("o", "text", "output format, one of yaml, json, text")
 	flag.Var(&searchKeys, "s", "define search keys multiple times, e.g. -s sriov -s [0] -s ip")
 	flag.Parse()
 
 	// read yaml file into buffer
 	var filebuf []byte
-	if yamlpath != nil {
-		filename, err := filepath.Abs(*yamlpath)
-		if err != nil {
-			panic(err.Error())
-		}
-		filebuf, err = os.ReadFile(filename)
-		if err != nil {
-			panic(err.Error())
-		}
-	} else {
-		filename, err := filepath.Abs("/dev/stdin")
-		if err != nil {
-			panic(err.Error())
-		}
-		filebuf, err = os.ReadFile(filename)
-		if err != nil {
-			panic(err.Error())
-		}
+	filename, err := filepath.Abs(*yamlpath)
+	if err != nil {
+		panic(err.Error())
+	}
+	filebuf, err = os.ReadFile(filename)
+	if err != nil {
+		panic(err.Error())
 	}
 
 	// remove comments and empty lines, etc
@@ -72,23 +61,29 @@ func main() {
 
 	// parse it
 	var data interface{}
-	err := yaml.Unmarshal(filebuf, &data)
+	err = yaml.Unmarshal(filebuf, &data)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: %s\n", err.Error()))
 	}
 
+	data, err = yamlconv.Search(data, searchKeys)
+	if err != nil {
+		panic(fmt.Sprintf("ERROR: %s\n", err.Error()))
+	}
 	switch *ofmt {
 	case "text":
-		data, err := yamlconv.Search(data, searchKeys)
-		if err != nil {
-			panic(fmt.Sprintf("ERROR: %s\n", err.Error()))
-		}
 		yamlconv.Print(data, "  ")
 	case "json":
-		ret, err := yamlconv.MarshalJson(data, searchKeys)
+		buf, err := yamlconv.MarshalJson(data, []string{})
 		if err != nil {
 			panic(fmt.Sprintf("ERROR: %s\n", err.Error()))
 		}
-		fmt.Printf("%s\n", ret)
+		os.Stdout.Write(buf)
+	case "yaml":
+		buf, err := yaml.Marshal(data)
+		if err != nil {
+			panic(fmt.Sprintf("ERROR: %s\n", err.Error()))
+		}
+		os.Stdout.Write(buf)
 	}
 }
